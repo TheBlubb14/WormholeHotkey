@@ -17,13 +17,13 @@ namespace WormholeHotkey
 
             if (Player.DeadOrGhost)
             {
-                Main.NewText($"You are dead");
+                Mod.Logger.Info("Player is dead");
                 return;
             }
 
             if (Main.cancelWormHole)
             {
-                Main.NewText($"Wormhole potions are disabled");
+                Mod.Logger.Info($"Wormhole potions are disabled");
                 return;
             }
 
