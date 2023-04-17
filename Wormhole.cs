@@ -5,12 +5,22 @@ using Terraria.ModLoader;
 using System.Linq;
 using System.Collections.Generic;
 using Terraria.Localization;
+using System;
 
 namespace WormholeHotkey
 {
     public class Wormhole : ModPlayer
     {
+        private bool resetHome;
+        private int originalItem = 0;
+
         public override void ProcessTriggers(TriggersSet triggersSet)
+        {
+            TriggerUnity();
+            TriggerHome();
+        }
+
+        private void TriggerUnity()
         {
             if (!KeybindSystem.TeleportKeybind.JustPressed)
                 return;
@@ -54,6 +64,43 @@ namespace WormholeHotkey
             UnityTeleport(nextTeammate);
         }
 
+        private void TriggerHome()
+        {
+            if (!KeybindSystem.HomeKeybind.JustPressed)
+                return;
+
+            if (Player.DeadOrGhost)
+            {
+                Mod.Logger.Info("Player is dead");
+                return;
+            }
+
+            var allowedItems = new[] { ItemID.PotionOfReturn, ItemID.RecallPotion, ItemID.MagicMirror, ItemID.IceMirror, ItemID.CellPhone };
+            var index = Array.FindIndex(Player.inventory, x => allowedItems.Any(y => y == x.type));
+            if (index == -1)
+            {
+                Mod.Logger.Info("Player has no suitable item to teleport home");
+                return;
+            }
+
+            originalItem = Player.selectedItem;
+            Player.selectedItem = index;
+            Player.controlUseItem = true;
+            Player.ItemCheck(index);
+            resetHome = true;
+        }
+
+        public override void PostUpdate()
+        {
+            if (resetHome && originalItem != 0 && Player.ItemTimeIsZero && Player.ItemAnimationEndingOrEnded)
+            {
+                Player.selectedItem = originalItem;
+                resetHome = false;
+            }
+
+            base.PostUpdate();
+        }
+
         private void ReleaseHooks()
         {
             Player.grappling[0] = -1;
@@ -94,8 +141,8 @@ namespace WormholeHotkey
         {
             return Main.player?
                 .ToArray()
-                .Where(x => 
-                    x.team == Player.team && 
+                .Where(x =>
+                    x.team == Player.team &&
                     x.whoAmI != Player.whoAmI &&
                     !x.dead)
                 ?? Enumerable.Empty<Player>();
